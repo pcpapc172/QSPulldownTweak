@@ -9,6 +9,7 @@ import com.highcapable.yukihookapi.hook.factory.configs
 import com.highcapable.yukihookapi.hook.factory.encase
 import com.highcapable.yukihookapi.hook.xposed.proxy.IYukiHookXposedInit
 import de.robv.android.xposed.XposedHelpers.callMethod
+import de.robv.android.xposed.XposedHelpers.getBooleanField
 import de.robv.android.xposed.XposedHelpers.getIntField
 import de.robv.android.xposed.XposedHelpers.getObjectField
 
@@ -58,6 +59,36 @@ object HookEntry : IYukiHookXposedInit {
 
                             if (showQsOverride) result = true
                         }
+                    }
+                }
+
+            // Makes swipe-up-to-close fully collapse QS in one motion,
+            // instead of stopping at the notification-shade (QQS) height first.
+            //
+            // flingQs(velocity, type, callback, animate) collapses QS. `type` is:
+            //   0 = FLING_EXPAND  (re-expand back to full QS)
+            //   1 = FLING_COLLAPSE (collapse down to mMinExpansionHeight, i.e. QQS/notifications — the "1st swipe")
+            //   2 = FLING_HIDE    (collapse all the way to 0 — fully closed)
+            // NotificationPanelViewController always calls this with type=1 on a normal
+            // swipe-up-to-close, and only uses type=2 in split-shade mode. We upgrade
+            // 1 -> 2 here so a single swipe-up always fully closes, like split-shade does.
+            "com.android.systemui.shade.QuickSettingsControllerImpl".toClass()
+                .resolve()
+                .firstMethod {
+                    name = "flingQs"
+                    parameters(Float::class, Int::class, Runnable::class, Boolean::class)
+                }.hook {
+                    before {
+                        val oneSwipeClose = prefs.getBoolean("qs_one_swipe_close", false)
+                        if (!oneSwipeClose) return@before
+
+                        val type = args[1] as Int
+                        if (type != 1) return@before // only touch the "collapse to QQS" case
+
+                        val isSplitShade = getBooleanField(instance, "mSplitShadeEnabled") as? Boolean ?: false
+                        if (isSplitShade) return@before // split shade already fully closes in one swipe
+
+                        args[1] = 2 // FLING_HIDE — force full close instead of partial collapse
                     }
                 }
         }

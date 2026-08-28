@@ -11,4 +11,7 @@
     <string name="qs_pulldown_disabled">Disabled</string>
     <string name="qs_pulldown_right">From right</string>
     <string name="qs_pulldown_left">From left</string>
+
+    <string name="qs_one_swipe_close_title">Close in one swipe</string>
+    <string name="qs_one_swipe_close_description">Swiping up on an expanded Quick Settings panel closes it fully in one motion, instead of collapsing to notifications first</string>
 </resources>

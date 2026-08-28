@@ -44,6 +44,7 @@ import me.connerowen.qspulldowntweak.util.rememberState
 import me.zhanghai.compose.preference.ListPreference
 import me.zhanghai.compose.preference.ListPreferenceType
 import me.zhanghai.compose.preference.ProvidePreferenceLocals
+import me.zhanghai.compose.preference.SwitchPreference
 import me.zhanghai.compose.preference.preferenceCategory
 
 private const val REPO_URL = "https://github.com/ShotSkydiver/QSPulldownTweak"
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
         var pulldownMode by DataConst.PREF_QS_PULLDOWN_MODE.rememberState()
         val entries = stringArrayResource(R.array.qs_pulldown_entries)
         val values = stringArrayResource(R.array.qs_pulldown_values)
+        var oneSwipeClose by DataConst.PREF_QS_ONE_SWIPE_CLOSE.rememberState()
 
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -135,6 +137,17 @@ class MainActivity : ComponentActivity() {
                         titleId = R.string.qs_pulldown_setting_title,
                         summaryId = R.string.qs_pulldown_setting_description,
                     )
+
+                    item(key = "qs_one_swipe_close", contentType = "SwitchPreference") {
+                        SwitchPreference(
+                            value = oneSwipeClose,
+                            onValueChange = { oneSwipeClose = it },
+                            modifier = Modifier.preferenceModifier(preferenceColor, RoundedCornerShape(24.dp)),
+                            title = { Text(stringResource(R.string.qs_one_swipe_close_title)) },
+                            summary = { Text(stringResource(R.string.qs_one_swipe_close_description)) },
+                            icon = { Icon(painterResource(R.drawable.swipe_down), null) },
+                        )
+                    }
                 }
             }
         }
