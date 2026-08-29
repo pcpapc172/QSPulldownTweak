@@ -64,9 +64,17 @@ object HookEntry : IYukiHookXposedInit {
                             }
                             showQsOverride = showQsOverride and (mBarState == 0)
 
-                            // Record whether *this* open attempt is our forced-gesture
-                            // open, so the close-side hook below knows whether to apply.
-                            qsOpenedViaGesture = showQsOverride
+                            // isOpenQsEvent fires on every new touch-down on the panel —
+                            // including the touch-down of a *closing* swipe, not just
+                            // genuine opens. Only (re)track our gesture-open state when
+                            // QS is actually collapsed right now; if it's already
+                            // expanded, this call is incidental to some other gesture
+                            // (e.g. the start of a close swipe) and must not clobber the
+                            // flag the close-hook below depends on.
+                            val isCurrentlyExpanded = callMethod(instance, "getExpanded") as? Boolean ?: false
+                            if (!isCurrentlyExpanded) {
+                                qsOpenedViaGesture = showQsOverride
+                            }
 
                             if (showQsOverride) result = true
                         }
