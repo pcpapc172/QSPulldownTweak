@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.highcapable.yukihookapi.YukiHookAPI
+import me.connerowen.qspulldowntweak.BuildConfig
 import me.connerowen.qspulldowntweak.R
 import me.connerowen.qspulldowntweak.ui.theme.AppTheme
 import me.connerowen.qspulldowntweak.data.DataConst
@@ -218,7 +219,7 @@ class MainActivity : ComponentActivity() {
                 )
 
                 Text(
-                    text = stringResource(id = R.string.module_version),
+                    text = stringResource(id = R.string.module_version, BuildConfig.VERSION_NAME),
                     color = contentColor,
                     fontSize = 14.sp,
                     maxLines = 1

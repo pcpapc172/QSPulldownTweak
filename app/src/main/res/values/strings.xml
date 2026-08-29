@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">QS Expand on Pulldown</string>
     <string name="xposed_desc">Pull down from the right or left side of the status bar to expand quick settings in one swipe</string>
-    <string name="module_version">Module version: 0.1</string>
+    <string name="module_version">Module version: %1$s</string>
     <string name="module_not_activated">Module not activated</string>
     <string name="module_is_activated">Module is activated</string>
 
