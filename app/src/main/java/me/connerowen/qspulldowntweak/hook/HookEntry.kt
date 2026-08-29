@@ -17,6 +17,13 @@ import de.robv.android.xposed.XposedHelpers.getObjectField
 @InjectYukiHookWithXposed(isUsingResourcesHook = true)
 object HookEntry : IYukiHookXposedInit {
 
+    // Tracks whether the QS panel currently expanded/expanding was opened via our
+    // forced edge-swipe gesture (as opposed to the normal two-stage swipe, a
+    // notification tap, split-shade, etc). Reset on every new isOpenQsEvent check
+    // (i.e. every fresh open attempt) and cleared once QS fully closes.
+    @Volatile
+    private var qsOpenedViaGesture = false
+
     override fun onInit() = configs {
         YukiHookAPI.configs {
             debugLog {
@@ -57,21 +64,29 @@ object HookEntry : IYukiHookXposedInit {
                             }
                             showQsOverride = showQsOverride and (mBarState == 0)
 
+                            // Record whether *this* open attempt is our forced-gesture
+                            // open, so the close-side hook below knows whether to apply.
+                            qsOpenedViaGesture = showQsOverride
+
                             if (showQsOverride) result = true
                         }
                     }
                 }
 
-            // Makes swipe-up-to-close fully collapse QS in one motion,
-            // instead of stopping at the notification-shade (QQS) height first.
+            // When QS was opened via our forced edge gesture, make swipe-up-to-close
+            // fully collapse it in one motion from anywhere on the panel — instead of
+            // only fully closing when the closing swipe also starts at the edge, and
+            // otherwise stopping at the notification-shade (QQS) height first.
             //
             // flingQs(velocity, type, callback, animate) collapses QS. `type` is:
-            //   0 = FLING_EXPAND  (re-expand back to full QS)
+            //   0 = FLING_EXPAND   (re-expand back to full QS)
             //   1 = FLING_COLLAPSE (collapse down to mMinExpansionHeight, i.e. QQS/notifications — the "1st swipe")
-            //   2 = FLING_HIDE    (collapse all the way to 0 — fully closed)
-            // NotificationPanelViewController always calls this with type=1 on a normal
-            // swipe-up-to-close, and only uses type=2 in split-shade mode. We upgrade
-            // 1 -> 2 here so a single swipe-up always fully closes, like split-shade does.
+            //   2 = FLING_HIDE     (collapse all the way to 0 — fully closed)
+            // NotificationPanelViewController calls this with type=1 on a normal
+            // swipe-up-to-close regardless of where on the panel the swipe starts, and
+            // only uses type=2 in split-shade mode. We upgrade 1 -> 2 here — but only
+            // for a session we know was opened via our gesture — so a single swipe-up
+            // anywhere on the panel always fully closes, like split-shade already does.
             "com.android.systemui.shade.QuickSettingsControllerImpl".toClass()
                 .resolve()
                 .firstMethod {
@@ -81,14 +96,20 @@ object HookEntry : IYukiHookXposedInit {
                     before {
                         val oneSwipeClose = prefs.getBoolean("qs_one_swipe_close", false)
                         if (!oneSwipeClose) return@before
+                        if (!qsOpenedViaGesture) return@before // don't touch normally-opened QS sessions
 
                         val type = args[1] as Int
-                        if (type != 1) return@before // only touch the "collapse to QQS" case
+                        if (type == 2) {
+                            qsOpenedViaGesture = false // already fully closing; session over
+                            return@before
+                        }
+                        if (type != 1) return@before // ignore FLING_EXPAND (snap back open)
 
                         val isSplitShade = getBooleanField(instance, "mSplitShadeEnabled") as? Boolean ?: false
                         if (isSplitShade) return@before // split shade already fully closes in one swipe
 
                         args[1] = 2 // FLING_HIDE — force full close instead of partial collapse
+                        qsOpenedViaGesture = false // this collapse fully closes it; reset for next session
                     }
                 }
         }
